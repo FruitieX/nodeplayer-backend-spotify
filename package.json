@@ -1,0 +1,24 @@
+{
+  "name": "nodeplayer-spotify",
+  "version": "0.1.0",
+  "description": "spotify backend for nodeplayer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FruitieX/nodeplayer-spotify.git"
+  },
+  "author": "FruitieX",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/FruitieX/nodeplayer-spotify/issues"
+  },
+  "homepage": "https://github.com/FruitieX/nodeplayer-spotify",
+  "dependencies": {
+    "fluent-ffmpeg": "^2.0.0-rc3",
+    "libspotify": "^0.2.2",
+    "mkdirp": "^0.5.0"
+  }
+}
