@@ -5,6 +5,7 @@ var ffmpeg = require('fluent-ffmpeg');
 var creds = require(process.env.HOME + '/.spotifyCreds.json');
 
 var spotifyBackend = {};
+spotifyBackend.name = 'spotify';
 spotifyBackend.spotify = require('node-spotify')({
     appkeyFile: process.env.HOME + '/.spotify_appkey.key'
 });
@@ -109,7 +110,7 @@ spotifyBackend.search = function(query, callback, errCallback) {
                     duration: track.duration * 1000,
                     songID: track.link,
                     score: track.popularity,
-                    backendName: 'spotify',
+                    backendName: spotifyBackend.name,
                     format: 'opus'
                 };
             }
