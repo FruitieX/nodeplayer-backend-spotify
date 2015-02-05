@@ -58,7 +58,7 @@ var spotifyDownload = function(songID, callback, errCallback) {
     var audioHandler = function(err, buffer) {
         if(err) {
             console.log('error from spotify audioHandler' + err);
-            cancelCallback();
+            cancelCallback('audioHandler error');
             errCallback(err);
         } else {
             bufStream.push(buffer);
@@ -72,7 +72,11 @@ var spotifyDownload = function(songID, callback, errCallback) {
     }});
 
     cancelCallback = encodeSong(bufStream, 0, songID, callback, errCallback);
-    return cancelCallback;
+    return function(err) {
+        spotifyBackend.spotify.player.stop();
+        cancelCallback(err);
+        bufStream.end();
+    };
 };
 
 // cache songID to disk.
@@ -85,7 +89,6 @@ spotifyBackend.prepareSong = function(songID, callback, errCallback) {
         // song was found from cache
         if(callback)
             callback();
-        return;
     } else {
         return spotifyDownload(songID, callback, errCallback);
     }
