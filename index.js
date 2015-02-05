@@ -18,6 +18,8 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
 
     var command = ffmpeg(origStream)
         .noVideo()
+        .inputFormat('s16le')
+        .inputOption('-ac 2')
         .audioCodec('libopus')
         .audioBitrate('192')
         .on('end', function() {
@@ -49,40 +51,26 @@ var spotifyDownload = function(songID, callback, errCallback) {
     var track = spotifyBackend.spotify.createFromLink(songID);
     var cancelCallback;
 
-    var bufferedData = [];
-
-    var Readable = require('stream').Readable;
-    var util = require('util');
-    util.inherits(bufWriter, Readable);
-
-    function bufWriter(opt) {
-        Readable.call(this, opt);
-    }
-    bufWriter.prototype._read = function() {
-        if(bufferedData.length) {
-            var tmp = bufferedData.shift();
-            console.log('there');
-            this.push(tmp);
-        } else {
-            this.push('');
-        }
-    };
-
-    var writer = new bufWriter();
+    var stream = require('stream');
+    var bufStream = new stream.PassThrough();
 
     var audioHandler = function(err, buffer) {
         if(err) {
+            console.log('error from spotify audioHandler' + err);
             cancelCallback();
-            errCallback();
+            errCallback(err);
         } else {
-            bufferedData.push(buffer);
+            bufStream.push(buffer);
             return true;
         }
     };
     spotifyBackend.spotify.useNodejsAudio(audioHandler);
     spotifyBackend.spotify.player.play(track);
+    spotifyBackend.spotify.player.on({'endOfTrack': function() {
+        bufStream.end();
+    }});
 
-    cancelCallback = encodeSong(writer, 0, songID, callback, errCallback);
+    cancelCallback = encodeSong(bufStream, 0, songID, callback, errCallback);
     return cancelCallback;
 };
 
