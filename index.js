@@ -81,7 +81,7 @@ var spotifyDownload = function(songID, callback, errCallback) {
         // TODO: this is stupid stupid stupid
         // but how should we know node-spotify won't call audioHandler
         // again after we end the stream here :(
-        setTimeout(bufStream.end(), 1000);
+        setTimeout(bufStream.end, 1000);
     }});
 
     cancelCallback = encodeSong(bufStream, 0, songID, callback, errCallback);
