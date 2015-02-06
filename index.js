@@ -15,7 +15,7 @@ var config, player;
 // TODO: seeking
 var encodeSong = function(origStream, seek, songID, callback, errCallback) {
     var incompletePath = config.songCachePath + '/spotify/incomplete/' + songID + '.opus';
-    var incompleteStream = fs.openWriteStream(incompletePath, );
+    var incompleteStream = fs.createWriteStream(incompletePath, {flags: 'w'});
     var encodedPath = config.songCachePath + '/spotify/' + songID + '.opus';
 
     var command = ffmpeg(origStream)
@@ -24,6 +24,7 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
         .inputOption('-ac 2')
         .audioCodec('libopus')
         .audioBitrate('192')
+        .format('opus')
         .on('end', function() {
             console.log('successfully transcoded ' + songID);
 
@@ -36,11 +37,12 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
             if(fs.existsSync(incompletePath))
                 fs.unlinkSync(incompletePath);
             errCallback();
-        });
+        })
 
-    var stream = command.pipe();
+    var opusStream = command.pipe();
 
-    stream.on('data', function(chunk) {
+    opusStream.on('data', function(chunk) {
+        console.log(chunk.length);
         console.log(chunk);
     });
 
