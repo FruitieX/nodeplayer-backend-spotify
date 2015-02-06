@@ -45,6 +45,7 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
         incompleteStream.write(chunk);
     });
     opusStream.on('end', function() {
+        console.log('ending incompleteStream');
         incompleteStream.end();
     });
 
@@ -81,7 +82,10 @@ var spotifyDownload = function(songID, callback, errCallback) {
         // TODO: this is stupid stupid stupid
         // but how should we know node-spotify won't call audioHandler
         // again after we end the stream here :(
-        setTimeout(bufStream.end, 1000);
+        setTimeout(function() {
+            console.log('ending bufStream');
+            bufStream.end();
+        }, 1000);
     }});
 
     cancelCallback = encodeSong(bufStream, 0, songID, callback, errCallback);
