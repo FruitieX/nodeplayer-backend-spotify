@@ -92,7 +92,11 @@ var spotifyDownload = function(songID, callback, errCallback) {
     return function(err) {
         spotifyBackend.spotify.player.stop();
         cancelCallback(err);
-        bufStream.end();
+        // TODO: more stupid
+        setTimeout(function() {
+            console.log('ending bufStream');
+            bufStream.end();
+        }, 1000);
     };
 };
 
