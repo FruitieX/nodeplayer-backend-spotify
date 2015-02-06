@@ -25,6 +25,13 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
         .audioCodec('libopus')
         .audioBitrate('192')
         .format('opus')
+        .on('end', function() {
+            console.log('successfully transcoded ' + songID);
+
+            // atomically (I hope so) move result to encodedPath
+            fs.renameSync(incompletePath, encodedPath);
+            callback();
+        })
         .on('error', function(err) {
             console.log('spotify: error while transcoding ' + songID + ': ' + err);
             if(fs.existsSync(incompletePath))
@@ -38,12 +45,7 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
         incompleteStream.write(chunk);
     });
     opusStream.on('end', function() {
-        console.log('successfully transcoded ' + songID);
         incompleteStream.end();
-
-        // atomically (I hope so) move result to encodedPath
-        fs.renameSync(incompletePath, encodedPath);
-        callback();
     });
 
     console.log('transcoding ' + songID + '...');
