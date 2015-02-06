@@ -15,6 +15,7 @@ var config, player;
 // TODO: seeking
 var encodeSong = function(origStream, seek, songID, callback, errCallback) {
     var incompletePath = config.songCachePath + '/spotify/incomplete/' + songID + '.opus';
+    var incompleteStream = fs.openWriteStream(incompletePath, );
     var encodedPath = config.songCachePath + '/spotify/' + songID + '.opus';
 
     var command = ffmpeg(origStream)
@@ -30,13 +31,18 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
             fs.renameSync(incompletePath, encodedPath);
             callback();
         })
-    .on('error', function(err) {
-        console.log('spotify: error while transcoding ' + songID + ': ' + err);
-        if(fs.existsSync(incompletePath))
-            fs.unlinkSync(incompletePath);
-        errCallback();
-    })
-    .save(incompletePath);
+        .on('error', function(err) {
+            console.log('spotify: error while transcoding ' + songID + ': ' + err);
+            if(fs.existsSync(incompletePath))
+                fs.unlinkSync(incompletePath);
+            errCallback();
+        });
+
+    var stream = command.pipe();
+
+    stream.on('data', function(chunk) {
+        console.log(chunk);
+    });
 
     console.log('transcoding ' + songID + '...');
     return function(err) {
