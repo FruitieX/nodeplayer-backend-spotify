@@ -25,13 +25,6 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
         .audioCodec('libopus')
         .audioBitrate('192')
         .format('opus')
-        .on('end', function() {
-            console.log('successfully transcoded ' + songID);
-
-            // atomically (I hope so) move result to encodedPath
-            fs.renameSync(incompletePath, encodedPath);
-            callback();
-        })
         .on('error', function(err) {
             console.log('spotify: error while transcoding ' + songID + ': ' + err);
             if(fs.existsSync(incompletePath))
@@ -39,11 +32,18 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
             errCallback();
         })
 
-    var opusStream = command.pipe();
-
+    var opusStream = command.pipe(null, {end: true});
     opusStream.on('data', function(chunk) {
-        console.log(chunk.length);
-        console.log(chunk);
+        // call progress hook with backendName & songID
+        incompleteStream.write(chunk);
+    });
+    opusStream.on('end', function() {
+        console.log('successfully transcoded ' + songID);
+        incompleteStream.end();
+
+        // atomically (I hope so) move result to encodedPath
+        fs.renameSync(incompletePath, encodedPath);
+        callback();
     });
 
     console.log('transcoding ' + songID + '...');
@@ -76,7 +76,10 @@ var spotifyDownload = function(songID, callback, errCallback) {
     spotifyBackend.spotify.useNodejsAudio(audioHandler);
     spotifyBackend.spotify.player.play(track);
     spotifyBackend.spotify.player.on({'endOfTrack': function() {
-        bufStream.end();
+        // TODO: this is stupid stupid stupid
+        // but how should we know node-spotify won't call audioHandler
+        // again after we end the stream here :(
+        setTimeout(bufStream.end(), 1000);
     }});
 
     cancelCallback = encodeSong(bufStream, 0, songID, callback, errCallback);
