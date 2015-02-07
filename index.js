@@ -13,7 +13,7 @@ spotifyBackend.spotify = require('node-spotify')({
 var config, player;
 
 // TODO: seeking
-var encodeSong = function(origStream, seek, songID, callback, progCallback, errCallback) {
+var encodeSong = function(origStream, seek, songID, progCallback, errCallback) {
     var incompletePath = config.songCachePath + '/spotify/incomplete/' + songID + '.opus';
     var incompleteStream = fs.createWriteStream(incompletePath, {flags: 'w'});
     var encodedPath = config.songCachePath + '/spotify/' + songID + '.opus';
@@ -25,29 +25,32 @@ var encodeSong = function(origStream, seek, songID, callback, progCallback, errC
         .audioCodec('libopus')
         .audioBitrate('192')
         .format('opus')
-        .on('end', function() {
-            console.log('successfully transcoded ' + songID);
-
-            // atomically (I hope so) move result to encodedPath
-            fs.renameSync(incompletePath, encodedPath);
-            callback();
-        })
         .on('error', function(err) {
             console.log('spotify: error while transcoding ' + songID + ': ' + err);
             if(fs.existsSync(incompletePath))
                 fs.unlinkSync(incompletePath);
-            errCallback();
+            errCallback(err);
         })
 
     var opusStream = command.pipe(null, {end: true});
     opusStream.on('data', function(chunk) {
         incompleteStream.write(chunk, undefined, function() {
-            progCallback(false);
+            progCallback(chunk.length, false);
         });
     });
     opusStream.on('end', function() {
         incompleteStream.end(undefined, undefined, function() {
-            progCallback(true);
+            console.log('transcoding ended for ' + songID);
+
+            // TODO: we don't know if transcoding ended successfully or not,
+            // and there might be a race condition between errCallback deleting
+            // the file and us trying to move it to the songCache
+
+            // atomically move result to encodedPath
+            if(fs.existsSync(incompletePath))
+                fs.renameSync(incompletePath, encodedPath);
+
+            progCallback(0, true);
         });
     });
 
@@ -57,11 +60,11 @@ var encodeSong = function(origStream, seek, songID, callback, progCallback, errC
         console.log('spotify: canceled preparing: ' + songID + ': ' + err);
         if(fs.existsSync(incompletePath))
             fs.unlinkSync(incompletePath);
-        errCallback();
+        errCallback('canceled preparing: ' + songID + ': ' + err);
     };
 };
 
-var spotifyDownload = function(songID, callback, progCallback, errCallback) {
+var spotifyDownload = function(songID, progCallback, errCallback) {
     var track = spotifyBackend.spotify.createFromLink(songID);
     var cancelEncoding;
 
@@ -85,35 +88,31 @@ var spotifyDownload = function(songID, callback, progCallback, errCallback) {
         // but how should we know node-spotify won't call audioHandler
         // again after we end the stream here :(
         setTimeout(function() {
-            console.log('ending bufStream');
             bufStream.end();
         }, 1000);
     }});
 
-    cancelEncoding = encodeSong(bufStream, 0, songID, callback, progCallback, errCallback);
+    cancelEncoding = encodeSong(bufStream, 0, songID, progCallback, errCallback);
     return function(err) {
         spotifyBackend.spotify.player.stop();
         cancelEncoding(err);
         // TODO: more stupid
         setTimeout(function() {
-            console.log('ending bufStream');
             bufStream.end();
         }, 1000);
     };
 };
 
 // cache songID to disk.
-// on success: callback must be called
+// on success: progCallback must be called with true as argument
 // on failure: errCallback must be called with error message
-spotifyBackend.prepareSong = function(songID, callback, progCallback, errCallback) {
+spotifyBackend.prepareSong = function(songID, progCallback, errCallback) {
     var filePath = config.songCachePath + '/spotify/' + songID + '.opus';
 
     if(fs.existsSync(filePath)) {
-        // song was found from cache
-        if(callback)
-            callback();
+        progCallback(true);
     } else {
-        return spotifyDownload(songID, callback, progCallback, errCallback);
+        return spotifyDownload(songID, progCallback, errCallback);
     }
 };
 spotifyBackend.search = function(query, callback, errCallback) {
