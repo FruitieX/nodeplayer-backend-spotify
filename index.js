@@ -13,7 +13,7 @@ spotifyBackend.spotify = require('node-spotify')({
 var config, player;
 
 // TODO: seeking
-var encodeSong = function(origStream, seek, songID, callback, progCallback errCallback) {
+var encodeSong = function(origStream, seek, songID, callback, progCallback, errCallback) {
     var incompletePath = config.songCachePath + '/spotify/incomplete/' + songID + '.opus';
     var incompleteStream = fs.createWriteStream(incompletePath, {flags: 'w'});
     var encodedPath = config.songCachePath + '/spotify/' + songID + '.opus';
