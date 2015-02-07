@@ -61,7 +61,7 @@ var encodeSong = function(origStream, seek, songID, callback, progCallback, errC
     };
 };
 
-var spotifyDownload = function(songID, callback, errCallback) {
+var spotifyDownload = function(songID, callback, progCallback, errCallback) {
     var track = spotifyBackend.spotify.createFromLink(songID);
     var cancelEncoding;
 
@@ -90,7 +90,7 @@ var spotifyDownload = function(songID, callback, errCallback) {
         }, 1000);
     }});
 
-    cancelEncoding = encodeSong(bufStream, 0, songID, callback, errCallback);
+    cancelEncoding = encodeSong(bufStream, 0, songID, callback, progCallback, errCallback);
     return function(err) {
         spotifyBackend.spotify.player.stop();
         cancelEncoding(err);
@@ -105,7 +105,7 @@ var spotifyDownload = function(songID, callback, errCallback) {
 // cache songID to disk.
 // on success: callback must be called
 // on failure: errCallback must be called with error message
-spotifyBackend.prepareSong = function(songID, callback, errCallback) {
+spotifyBackend.prepareSong = function(songID, callback, progCallback, errCallback) {
     var filePath = config.songCachePath + '/spotify/' + songID + '.opus';
 
     if(fs.existsSync(filePath)) {
@@ -113,7 +113,7 @@ spotifyBackend.prepareSong = function(songID, callback, errCallback) {
         if(callback)
             callback();
     } else {
-        return spotifyDownload(songID, callback, errCallback);
+        return spotifyDownload(songID, callback, progCallback, errCallback);
     }
 };
 spotifyBackend.search = function(query, callback, errCallback) {
