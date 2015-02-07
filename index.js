@@ -13,7 +13,7 @@ spotifyBackend.spotify = require('node-spotify')({
 var config, player;
 
 // TODO: seeking
-var encodeSong = function(origStream, seek, songID, callback, errCallback) {
+var encodeSong = function(origStream, seek, songID, callback, progCallback errCallback) {
     var incompletePath = config.songCachePath + '/spotify/incomplete/' + songID + '.opus';
     var incompleteStream = fs.createWriteStream(incompletePath, {flags: 'w'});
     var encodedPath = config.songCachePath + '/spotify/' + songID + '.opus';
@@ -41,12 +41,14 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
 
     var opusStream = command.pipe(null, {end: true});
     opusStream.on('data', function(chunk) {
-        // call progress hook with backendName & songID
-        incompleteStream.write(chunk);
+        incompleteStream.write(chunk, undefined, function() {
+            progCallback(false);
+        });
     });
     opusStream.on('end', function() {
-        console.log('ending incompleteStream');
-        incompleteStream.end();
+        incompleteStream.end(undefined, undefined, function() {
+            progCallback(true);
+        });
     });
 
     console.log('transcoding ' + songID + '...');
@@ -61,7 +63,7 @@ var encodeSong = function(origStream, seek, songID, callback, errCallback) {
 
 var spotifyDownload = function(songID, callback, errCallback) {
     var track = spotifyBackend.spotify.createFromLink(songID);
-    var cancelCallback;
+    var cancelEncoding;
 
     var stream = require('stream');
     var bufStream = new stream.PassThrough();
@@ -69,7 +71,7 @@ var spotifyDownload = function(songID, callback, errCallback) {
     var audioHandler = function(err, buffer) {
         if(err) {
             console.log('error from spotify audioHandler' + err);
-            cancelCallback('audioHandler error');
+            cancelEncoding('audioHandler error');
             errCallback(err);
         } else {
             bufStream.push(buffer);
@@ -88,10 +90,10 @@ var spotifyDownload = function(songID, callback, errCallback) {
         }, 1000);
     }});
 
-    cancelCallback = encodeSong(bufStream, 0, songID, callback, errCallback);
+    cancelEncoding = encodeSong(bufStream, 0, songID, callback, errCallback);
     return function(err) {
         spotifyBackend.spotify.player.stop();
-        cancelCallback(err);
+        cancelEncoding(err);
         // TODO: more stupid
         setTimeout(function() {
             console.log('ending bufStream');
