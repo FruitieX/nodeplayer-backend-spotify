@@ -98,7 +98,7 @@ var spotifyDownload = function(songID, progCallback, errCallback) {
 
     cancelEncoding = encodeSong(bufStream, 0, songID, progCallback, errCallback);
     return function(err) {
-        spotifyBackend.spotify.player.stop();
+        //spotifyBackend.spotify.player.stop(); // this is probably causing occasional segfaults.
         cancelEncoding(err);
         // TODO: more stupid
         setTimeout(function() {
