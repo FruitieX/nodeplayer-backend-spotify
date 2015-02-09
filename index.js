@@ -106,6 +106,7 @@ var spotifyDownload = function(songID, progCallback, errCallback) {
 // cache songID to disk.
 // on success: progCallback must be called with true as argument
 // on failure: errCallback must be called with error message
+// returns a function that cancels preparing
 spotifyBackend.prepareSong = function(songID, progCallback, errCallback) {
     var filePath = config.songCachePath + '/spotify/' + songID + '.opus';
 
