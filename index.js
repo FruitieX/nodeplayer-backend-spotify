@@ -4,6 +4,10 @@ var fs = require('fs');
 var ffmpeg = require('fluent-ffmpeg');
 var creds = require(process.env.HOME + '/.spotifyCreds.json');
 
+// FOR DEBUGGING ONLY
+var SegfaultHandler = require('segfault-handler');
+SegfaultHandler.registerHandler();
+
 var spotifyBackend = {};
 spotifyBackend.name = 'spotify';
 spotifyBackend.spotify = require('node-spotify')({
