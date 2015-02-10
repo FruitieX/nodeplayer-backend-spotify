@@ -109,20 +109,22 @@ spotifyBackend.search = function(query, callback, errCallback) {
                 // this format is 100% WTF
                 var tracks = searchResult.result.tracks[0].track;
 
-                for(var i = 0; i < tracks.length; i++) {
-                    var track = tracks[i];
-                    var trackUri = spotifyWeb.id2uri('track', track.id[0].toString());
-                    results.songs[trackUri] = {
-                        artist: track.artist ? track.artist[0] : null,
-                        title: track.title ? track.title[0] : null,
-                        album: track.album ? track.album[0] : null,
-                        albumArt: null, // TODO
-                        duration: track.length ? track.length[0] : null,
-                        songID: trackUri,
-                        score: track.popularity ? 100 * track.popularity[0] : null,
-                        backendName: spotifyBackend.name,
-                        format: 'opus'
-                    };
+                if(tracks) {
+                    for(var i = 0; i < tracks.length; i++) {
+                        var track = tracks[i];
+                        var trackUri = spotifyWeb.id2uri('track', track.id[0].toString());
+                        results.songs[trackUri] = {
+                            artist: track.artist ? track.artist[0] : null,
+                            title: track.title ? track.title[0] : null,
+                            album: track.album ? track.album[0] : null,
+                            albumArt: null, // TODO
+                            duration: track.length ? track.length[0] : null,
+                            songID: trackUri,
+                            score: track.popularity ? 100 * track.popularity[0] : null,
+                            backendName: spotifyBackend.name,
+                            format: 'opus'
+                        };
+                    }
                 }
 
                 callback(results);
