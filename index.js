@@ -3,16 +3,13 @@ var url = require('url');
 var fs = require('fs');
 var ffmpeg = require('fluent-ffmpeg');
 var creds = require(process.env.HOME + '/.spotifyCreds.json');
+var stream = require('stream');
 
-// FOR DEBUGGING ONLY
-var SegfaultHandler = require('segfault-handler');
-SegfaultHandler.registerHandler();
+var xml2js = require('xml2js');
+var spotifyWeb = require('spotify-web');
 
 var spotifyBackend = {};
 spotifyBackend.name = 'spotify';
-spotifyBackend.spotify = require('node-spotify')({
-    appkeyFile: process.env.HOME + '/.spotify_appkey.key'
-});
 
 var config, player;
 
@@ -24,8 +21,8 @@ var encodeSong = function(origStream, seek, songID, progCallback, errCallback) {
 
     var command = ffmpeg(origStream)
         .noVideo()
-        .inputFormat('s16le')
-        .inputOption('-ac 2')
+        //.inputFormat('s16le')
+        //.inputOption('-ac 2')
         .audioCodec('libopus')
         .audioBitrate('192')
         .format('opus')
@@ -71,34 +68,14 @@ var encodeSong = function(origStream, seek, songID, progCallback, errCallback) {
 };
 
 var spotifyDownload = function(songID, progCallback, errCallback) {
-    var track = spotifyBackend.spotify.createFromLink(songID);
     var cancelEncoding;
-
-    var stream = require('stream');
-    var bufStream = new stream.PassThrough();
-
-    var audioHandler = function(err, buffer) {
+    spotifyBackend.spotify.get(songID, function(err, track) {
         if(err) {
-            console.log('error from spotify audioHandler' + err);
-            cancelEncoding('audioHandler error');
             errCallback(err);
         } else {
-            bufStream.push(buffer);
-            return true;
+            cancelEncoding = encodeSong(track.play(), 0, songID, progCallback, errCallback);
         }
-    };
-    spotifyBackend.spotify.useNodejsAudio(audioHandler);
-    spotifyBackend.spotify.player.play(track);
-    spotifyBackend.spotify.player.on({'endOfTrack': function() {
-        // TODO: this is stupid stupid stupid
-        // but how should we know node-spotify won't call audioHandler
-        // again after we end the stream here :(
-        setTimeout(function() {
-            bufStream.end();
-        }, 1000);
-    }});
-
-    cancelEncoding = encodeSong(bufStream, 0, songID, progCallback, errCallback);
+    });
     return function(err) {
         spotifyBackend.spotify.player.stop();
         cancelEncoding(err);
@@ -128,27 +105,34 @@ spotifyBackend.search = function(query, callback, errCallback) {
     results.songs = {};
 
     var offset = 0;
-    var search = new spotifyBackend.spotify.Search(query.terms, offset, config.searchResultCnt);
-    search.execute(function(err, searchResult) {
+    spotifyBackend.spotify.search(query.terms, function(err, xml) {
         if(err) {
             errCallback('error while searching spotify: ' + err);
         } else {
-            for(var i = 0; i < searchResult.numTracks; i++) {
-                var track = searchResult.getTrack(i);
-                results.songs[track.link] = {
-                    artist: track.artists ? track.artists[0].name : null,
-                    title: track.name,
-                    album: track.album ? track.album.name : null,
-                    albumArt: null, // TODO
-                    duration: track.duration * 1000,
-                    songID: track.link,
-                    score: track.popularity,
-                    backendName: spotifyBackend.name,
-                    format: 'opus'
-                };
-            }
+            var parser = new xml2js.Parser();
+            parser.on('end', function(searchResult) {
+                // this format is 100% WTF
+                var tracks = searchResult.result.tracks[0].track;
 
-            callback(results);
+                for(var i = 0; i < tracks.length; i++) {
+                    var track = tracks[i];
+                    var trackUri = spotifyWeb.id2uri('track', track.id[0].toString());
+                    results.songs[trackUri] = {
+                        artist: track.artist ? track.artist[0] : null,
+                        title: track.title ? track.title[0] : null,
+                        album: track.album ? track.album[0] : null,
+                        albumArt: null, // TODO
+                        duration: track.length ? track.length[0] : null,
+                        songID: trackUri,
+                        score: track.popularity ? 100 * track.popularity[0] : null,
+                        backendName: spotifyBackend.name,
+                        format: 'opus'
+                    };
+                }
+
+                callback(results);
+            });
+            parser.parseString(xml);
         }
     });
 };
@@ -160,10 +144,13 @@ spotifyBackend.init = function(_player, callback, errCallback) {
     mkdirp(config.songCachePath + '/spotify/incomplete');
 
     // initialize google play music backend
-    spotifyBackend.spotify.on({
-        ready: callback,
-        logout: errCallback
+    spotifyWeb.login(creds.login, creds.password, function(err, spotifySession) {
+        if(err) {
+            errCallback(err);
+        } else {
+            spotifyBackend.spotify = spotifySession;
+            callback();
+        }
     });
-    spotifyBackend.spotify.login(creds.login, creds.password, false, false);
 };
 module.exports = spotifyBackend;
