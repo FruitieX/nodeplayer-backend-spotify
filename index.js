@@ -77,12 +77,7 @@ var spotifyDownload = function(songID, progCallback, errCallback) {
         }
     });
     return function(err) {
-        spotifyBackend.spotify.player.stop();
         cancelEncoding(err);
-        // TODO: more stupid
-        setTimeout(function() {
-            bufStream.end();
-        }, 1000);
     };
 };
 
