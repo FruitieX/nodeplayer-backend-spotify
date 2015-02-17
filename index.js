@@ -137,7 +137,7 @@ spotifyBackend.search = function(query, callback, errCallback) {
     });
 };
 
-spotifyBackend.init = function(_player, callback, errCallback) {
+spotifyBackend.init = function(_player, callback) {
     player = _player;
     config = _player.config;
 
@@ -146,7 +146,7 @@ spotifyBackend.init = function(_player, callback, errCallback) {
     // initialize google play music backend
     spotifyWeb.login(creds.login, creds.password, function(err, spotifySession) {
         if(err) {
-            errCallback(err);
+            callback(err);
         } else {
             spotifyBackend.spotify = spotifySession;
             callback();
