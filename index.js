@@ -2,7 +2,7 @@ var mkdirp = require('mkdirp');
 var url = require('url');
 var fs = require('fs');
 var ffmpeg = require('fluent-ffmpeg');
-var creds = require(process.env.HOME + '/.spotifyCreds.json');
+var creds = require(getConfigPath('spotifyCreds.json'));
 var stream = require('stream');
 
 var xml2js = require('xml2js');
@@ -12,6 +12,27 @@ var spotifyBackend = {};
 spotifyBackend.name = 'spotify';
 
 var config, player;
+
+function getConfigPath(config) {
+	if (process.platform == 'win32')
+		return process.env.USERPROFILE + '\\nodeplayer\\' + config;
+	else
+		return process.env.HOME, '/.' + config;
+}
+
+function replaceSongID(songID) {
+	if (process.platform == 'win32')
+		return songID.replace(/:/g, "_");
+	else
+		return songID;
+}
+
+function unReplaceSongID(songID) {
+	if (process.platform == 'win32')
+		return songID.replace(/_/g, ":");
+	else
+		return songID;
+}
 
 // TODO: seeking
 var encodeSong = function(origStream, seek, songID, progCallback, errCallback) {
@@ -69,7 +90,7 @@ var encodeSong = function(origStream, seek, songID, progCallback, errCallback) {
 
 var spotifyDownload = function(songID, progCallback, errCallback) {
     var cancelEncoding;
-    spotifyBackend.spotify.get(songID, function(err, track) {
+    spotifyBackend.spotify.get(unReplaceSongID(songID), function(err, track) {
         if(err) {
             errCallback(err);
         } else {
@@ -125,7 +146,7 @@ spotifyBackend.search = function(query, callback, errCallback) {
                             album: track.album ? track.album[0] : null,
                             albumArt: null, // TODO
                             duration: track.length ? track.length[0] : null,
-                            songID: trackUri,
+                            songID: replaceSongID(trackUri),
                             score: track.popularity ? 100 * track.popularity[0] : null,
                             backendName: spotifyBackend.name,
                             format: 'opus'
