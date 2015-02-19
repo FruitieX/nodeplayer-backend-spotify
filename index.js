@@ -95,6 +95,12 @@ spotifyBackend.prepareSong = function(songID, progCallback, errCallback) {
         return spotifyDownload(songID, progCallback, errCallback);
     }
 };
+
+spotifyBackend.isPrepared = function(songID) {
+    var filePath = config.songCachePath + '/spotify/' + songID + '.opus';
+    return fs.existsSync(filePath);
+};
+
 spotifyBackend.search = function(query, callback, errCallback) {
     var results = {};
     results.songs = {};
