@@ -1,3 +1,10 @@
+var getConfigPath = function(config) {
+	if (process.platform == 'win32')
+		return process.env.USERPROFILE + '\\nodeplayer\\' + config;
+	else
+		return process.env.HOME + '/.' + config;
+}
+
 var mkdirp = require('mkdirp');
 var url = require('url');
 var fs = require('fs');
@@ -13,21 +20,14 @@ spotifyBackend.name = 'spotify';
 
 var config, player, logger;
 
-function getConfigPath(config) {
-	if (process.platform == 'win32')
-		return process.env.USERPROFILE + '\\nodeplayer\\' + config;
-	else
-		return process.env.HOME, '/.' + config;
-}
-
-function replaceSongID(songID) {
+var replaceSongID = function(songID) {
 	if (process.platform == 'win32')
 		return songID.replace(/:/g, "_");
 	else
 		return songID;
 }
 
-function unReplaceSongID(songID) {
+var unReplaceSongID = function(songID) {
 	if (process.platform == 'win32')
 		return songID.replace(/_/g, ":");
 	else
