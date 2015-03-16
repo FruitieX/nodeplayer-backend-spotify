@@ -14,10 +14,10 @@ spotifyBackend.name = 'spotify';
 var config, player, logger;
 
 // TODO: seeking
-var encodeSong = function(origStream, seek, songID, progCallback, errCallback) {
-    var incompletePath = config.songCachePath + '/spotify/incomplete/' + songID + '.opus';
+var encodeSong = function(origStream, seek, song, progCallback, errCallback) {
+    var incompletePath = config.songCachePath + '/spotify/incomplete/' + song.songID + '.opus';
     var incompleteStream = fs.createWriteStream(incompletePath, {flags: 'w'});
-    var encodedPath = config.songCachePath + '/spotify/' + songID + '.opus';
+    var encodedPath = config.songCachePath + '/spotify/' + song.songID + '.opus';
 
     var command = ffmpeg(origStream)
         .noVideo()
@@ -27,21 +27,21 @@ var encodeSong = function(origStream, seek, songID, progCallback, errCallback) {
         .audioBitrate('192')
         .format('opus')
         .on('error', function(err) {
-            logger.error('error while transcoding ' + songID + ': ' + err);
+            logger.error('error while transcoding ' + song.songID + ': ' + err);
             if(fs.existsSync(incompletePath))
                 fs.unlinkSync(incompletePath);
-            errCallback(err);
+            errCallback(song, err);
         })
 
     var opusStream = command.pipe(null, {end: true});
     opusStream.on('data', function(chunk) {
         incompleteStream.write(chunk, undefined, function() {
-            progCallback(chunk.length, false);
+            progCallback(song, chunk.length, false);
         });
     });
     opusStream.on('end', function() {
         incompleteStream.end(undefined, undefined, function() {
-            logger.verbose('transcoding ended for ' + songID);
+            logger.verbose('transcoding ended for ' + song.songID);
 
             // TODO: we don't know if transcoding ended successfully or not,
             // and there might be a race condition between errCallback deleting
@@ -50,30 +50,30 @@ var encodeSong = function(origStream, seek, songID, progCallback, errCallback) {
             // atomically move result to encodedPath
             if(fs.existsSync(incompletePath)) {
                 fs.renameSync(incompletePath, encodedPath);
-                progCallback(0, true);
+                progCallback(song, 0, true);
             } else {
-                progCallback(0, false);
+                progCallback(song, 0, false);
             }
         });
     });
 
-    logger.verbose('transcoding ' + songID + '...');
+    logger.verbose('transcoding ' + song.songID + '...');
     return function(err) {
         command.kill();
-        logger.verbose('canceled preparing: ' + songID + ': ' + err);
+        logger.verbose('canceled preparing: ' + song.songID + ': ' + err);
         if(fs.existsSync(incompletePath))
             fs.unlinkSync(incompletePath);
-        errCallback('canceled preparing: ' + songID + ': ' + err);
+        errCallback(song, 'canceled preparing: ' + song.songID + ': ' + err);
     };
 };
 
-var spotifyDownload = function(songID, progCallback, errCallback) {
+var spotifyDownload = function(song, progCallback, errCallback) {
     var cancelEncoding;
-    spotifyBackend.spotify.get(songID, function(err, track) {
+    spotifyBackend.spotify.get(song.songID, function(err, track) {
         if(err) {
-            errCallback(err);
+            errCallback(song, err);
         } else {
-            cancelEncoding = encodeSong(track.play(), 0, songID, progCallback, errCallback);
+            cancelEncoding = encodeSong(track.play(), 0, song, progCallback, errCallback);
         }
     });
     return function(err) {
@@ -81,23 +81,23 @@ var spotifyDownload = function(songID, progCallback, errCallback) {
     };
 };
 
-// cache songID to disk.
+// cache song to disk.
 // on success: progCallback must be called with true as argument
 // on failure: errCallback must be called with error message
 // returns a function that cancels preparing
-spotifyBackend.prepareSong = function(songID, progCallback, errCallback) {
-    var filePath = config.songCachePath + '/spotify/' + songID + '.opus';
+spotifyBackend.prepareSong = function(song, progCallback, errCallback) {
+    var filePath = config.songCachePath + '/spotify/' + song.songID + '.opus';
 
     if(fs.existsSync(filePath)) {
         // true as first argument because there is song data
-        progCallback(true, true);
+        progCallback(song, true, true);
     } else {
-        return spotifyDownload(songID, progCallback, errCallback);
+        return spotifyDownload(song, progCallback, errCallback);
     }
 };
 
-spotifyBackend.isPrepared = function(songID) {
-    var filePath = config.songCachePath + '/spotify/' + songID + '.opus';
+spotifyBackend.isPrepared = function(song) {
+    var filePath = config.songCachePath + '/spotify/' + song.songID + '.opus';
     return fs.existsSync(filePath);
 };
 
