@@ -1,24 +1,25 @@
-var getConfigPath = function(config) {
-    if (process.platform == 'win32')
-        return process.env.USERPROFILE + '\\nodeplayer\\' + config;
-    else
-        return process.env.HOME + '/.' + config;
-}
+'use strict';
+
+var MODULE_NAME = 'backend-spotify';
 
 var mkdirp = require('mkdirp');
 var url = require('url');
 var fs = require('fs');
 var ffmpeg = require('fluent-ffmpeg');
-var creds = require(getConfigPath('spotifyCreds.json'));
 var stream = require('stream');
-
 var xml2js = require('xml2js');
 var spotifyWeb = require('spotify-web');
+
+var nodeplayerConfig = require('nodeplayer-config');
+var coreConfig = nodeplayerConfig.getConfig();
+var defaultConfig = require('./default-config.js');
+var config = nodeplayerConfig.getConfig(MODULE_NAME, defaultConfig);
 
 var spotifyBackend = {};
 spotifyBackend.name = 'spotify';
 
-var config, player, logger;
+var player;
+var logger;
 
 var replaceSongID = function(songID) {
     return songID.replace(/:/g, "_");
@@ -30,9 +31,9 @@ var unReplaceSongID = function(songID) {
 
 // TODO: seeking
 var encodeSong = function(origStream, seek, song, progCallback, errCallback) {
-    var incompletePath = config.songCachePath + '/spotify/incomplete/' + song.songID + '.opus';
+    var incompletePath = coreConfig.songCachePath + '/spotify/incomplete/' + song.songID + '.opus';
     var incompleteStream = fs.createWriteStream(incompletePath, {flags: 'w'});
-    var encodedPath = config.songCachePath + '/spotify/' + song.songID + '.opus';
+    var encodedPath = coreConfig.songCachePath + '/spotify/' + song.songID + '.opus';
 
     var command = ffmpeg(origStream)
         .noVideo()
@@ -101,7 +102,7 @@ var spotifyDownload = function(song, progCallback, errCallback) {
 // on failure: errCallback must be called with error message
 // returns a function that cancels preparing
 spotifyBackend.prepareSong = function(song, progCallback, errCallback) {
-    var filePath = config.songCachePath + '/spotify/' + song.songID + '.opus';
+    var filePath = coreConfig.songCachePath + '/spotify/' + song.songID + '.opus';
 
     if(fs.existsSync(filePath)) {
         // true as first argument because there is song data
@@ -112,7 +113,7 @@ spotifyBackend.prepareSong = function(song, progCallback, errCallback) {
 };
 
 spotifyBackend.isPrepared = function(song) {
-    var filePath = config.songCachePath + '/spotify/' + song.songID + '.opus';
+    var filePath = coreConfig.songCachePath + '/spotify/' + song.songID + '.opus';
     return fs.existsSync(filePath);
 };
 
@@ -157,13 +158,12 @@ spotifyBackend.search = function(query, callback, errCallback) {
 
 spotifyBackend.init = function(_player, _logger, callback) {
     player = _player;
-    config = _player.config;
     logger = _logger;
 
-    mkdirp(config.songCachePath + '/spotify/incomplete');
+    mkdirp.sync(coreConfig.songCachePath + '/spotify/incomplete');
 
     // initialize google play music backend
-    spotifyWeb.login(creds.login, creds.password, function(err, spotifySession) {
+    spotifyWeb.login(config.login, config.password, function(err, spotifySession) {
         if(err) {
             callback(err);
         } else {
