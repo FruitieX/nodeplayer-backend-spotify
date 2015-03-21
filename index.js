@@ -22,12 +22,12 @@ var player;
 var logger;
 
 var replaceSongID = function(songID) {
-    return songID.replace(/:/g, "_");
-}
+    return songID.replace(/:/g, '_');
+};
 
 var unReplaceSongID = function(songID) {
-    return songID.replace(/_/g, ":");
-}
+    return songID.replace(/_/g, ':');
+};
 
 // TODO: seeking
 var encodeSong = function(origStream, seek, song, progCallback, errCallback) {
@@ -44,10 +44,11 @@ var encodeSong = function(origStream, seek, song, progCallback, errCallback) {
         .format('opus')
         .on('error', function(err) {
             logger.error('error while transcoding ' + song.songID + ': ' + err);
-            if(fs.existsSync(incompletePath))
+            if (fs.existsSync(incompletePath)) {
                 fs.unlinkSync(incompletePath);
+            }
             errCallback(song, err);
-        })
+        });
 
     var opusStream = command.pipe(null, {end: true});
     opusStream.on('data', function(chunk) {
@@ -64,7 +65,7 @@ var encodeSong = function(origStream, seek, song, progCallback, errCallback) {
             // the file and us trying to move it to the songCache
 
             // atomically move result to encodedPath
-            if(fs.existsSync(incompletePath)) {
+            if (fs.existsSync(incompletePath)) {
                 fs.renameSync(incompletePath, encodedPath);
                 progCallback(song, 0, true);
             } else {
@@ -77,8 +78,9 @@ var encodeSong = function(origStream, seek, song, progCallback, errCallback) {
     return function(err) {
         command.kill();
         logger.verbose('canceled preparing: ' + song.songID + ': ' + err);
-        if(fs.existsSync(incompletePath))
+        if (fs.existsSync(incompletePath)) {
             fs.unlinkSync(incompletePath);
+        }
         errCallback(song, 'canceled preparing: ' + song.songID + ': ' + err);
     };
 };
@@ -86,7 +88,7 @@ var encodeSong = function(origStream, seek, song, progCallback, errCallback) {
 var spotifyDownload = function(song, progCallback, errCallback) {
     var cancelEncoding;
     spotifyBackend.spotify.get(unReplaceSongID(song.songID), function(err, track) {
-        if(err) {
+        if (err) {
             errCallback(song, err);
         } else {
             cancelEncoding = encodeSong(track.play(), 0, song, progCallback, errCallback);
@@ -104,7 +106,7 @@ var spotifyDownload = function(song, progCallback, errCallback) {
 spotifyBackend.prepareSong = function(song, progCallback, errCallback) {
     var filePath = coreConfig.songCachePath + '/spotify/' + song.songID + '.opus';
 
-    if(fs.existsSync(filePath)) {
+    if (fs.existsSync(filePath)) {
         // true as first argument because there is song data
         progCallback(song, true, true);
     } else {
@@ -123,7 +125,7 @@ spotifyBackend.search = function(query, callback, errCallback) {
 
     var offset = 0;
     spotifyBackend.spotify.search(query.terms, function(err, xml) {
-        if(err) {
+        if (err) {
             errCallback('error while searching spotify: ' + err);
         } else {
             var parser = new xml2js.Parser();
@@ -131,8 +133,8 @@ spotifyBackend.search = function(query, callback, errCallback) {
                 // this format is 100% WTF
                 var tracks = searchResult.result.tracks[0].track;
 
-                if(tracks) {
-                    for(var i = 0; i < tracks.length; i++) {
+                if (tracks) {
+                    for (var i = 0; i < tracks.length; i++) {
                         var track = tracks[i];
                         var trackUri = spotifyWeb.id2uri('track', track.id[0].toString());
                         results.songs[trackUri] = {
@@ -164,7 +166,7 @@ spotifyBackend.init = function(_player, _logger, callback) {
 
     // initialize google play music backend
     spotifyWeb.login(config.login, config.password, function(err, spotifySession) {
-        if(err) {
+        if (err) {
             callback(err);
         } else {
             spotifyBackend.spotify = spotifySession;
