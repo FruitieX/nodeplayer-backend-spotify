@@ -10,7 +10,7 @@ var stream = require('stream');
 var xml2js = require('xml2js');
 var spotifyWeb = require('spotify-web');
 
-var nodeplayerConfig = require('nodeplayer-config');
+var nodeplayerConfig = require('nodeplayer').config;
 var coreConfig = nodeplayerConfig.getConfig();
 var defaultConfig = require('./default-config.js');
 var config = nodeplayerConfig.getConfig(MODULE_NAME, defaultConfig);
