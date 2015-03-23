@@ -1,6 +1,7 @@
 'use strict';
 
-var MODULE_NAME = 'backend-spotify';
+var MODULE_NAME = 'spotify';
+var MODULE_TYPE = 'backend';
 
 var mkdirp = require('mkdirp');
 var url = require('url');
@@ -13,10 +14,10 @@ var spotifyWeb = require('spotify-web');
 var nodeplayerConfig = require('nodeplayer').config;
 var coreConfig = nodeplayerConfig.getConfig();
 var defaultConfig = require('./default-config.js');
-var config = nodeplayerConfig.getConfig(MODULE_NAME, defaultConfig);
+var config = nodeplayerConfig.getConfig(MODULE_TYPE + '-' + MODULE_NAME, defaultConfig);
 
 var spotifyBackend = {};
-spotifyBackend.name = 'spotify';
+spotifyBackend.name = MODULE_NAME;
 
 var player;
 var logger;
@@ -145,7 +146,7 @@ spotifyBackend.search = function(query, callback, errCallback) {
                             duration: track.length ? track.length[0] : null,
                             songID: replaceSongID(trackUri),
                             score: track.popularity ? 100 * track.popularity[0] : null,
-                            backendName: spotifyBackend.name,
+                            backendName: MODULE_NAME,
                             format: 'opus'
                         };
                     }
