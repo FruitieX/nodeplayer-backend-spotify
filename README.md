@@ -1,6 +1,8 @@
 nodeplayer-backend-spotify
 ==========================
 
+[![Build Status](https://travis-ci.org/FruitieX/nodeplayer-backend-spotify.svg?branch=master)](https://travis-ci.org/FruitieX/nodeplayer-backend-spotify)
+
 Spotify backend for nodeplayer
 
 Setup
